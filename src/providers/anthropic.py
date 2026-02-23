@@ -8,18 +8,24 @@ from .base import BaseLLMClient
 
 @dataclass
 class _ToolFunction:
+    """OpenAI 风格 tool.function 的最小兼容结构。"""
+
     name: str
     arguments: str
 
 
 @dataclass
 class _ToolCall:
+    """OpenAI 风格 tool_call 的最小兼容结构。"""
+
     id: str
     function: _ToolFunction
 
 
 @dataclass
 class _ResponseMessage:
+    """统一返回给 Agent 的消息结构。"""
+
     content: Optional[str]
     tool_calls: Optional[List[_ToolCall]]
 
@@ -28,6 +34,7 @@ class AnthropicLLMClient(BaseLLMClient):
     """Anthropic 客户端封装，向上兼容 OpenAI 风格响应。"""
 
     def __init__(self, model: str = "claude-3-5-sonnet-latest"):
+        """初始化 Anthropic 客户端并加载环境变量配置。"""
         from dotenv import load_dotenv
 
         load_dotenv()
@@ -46,8 +53,10 @@ class AnthropicLLMClient(BaseLLMClient):
 
     @staticmethod
     def _to_anthropic_tools(tools_schema: Optional[List[Dict]]) -> List[Dict]:
+        """将 OpenAI tools schema 转换为 Anthropic tools 格式。"""
         if not tools_schema:
             return []
+
         tools = []
         for t in tools_schema:
             func = t.get("function", {})
@@ -64,6 +73,7 @@ class AnthropicLLMClient(BaseLLMClient):
 
     @staticmethod
     def _convert_messages(messages: List[Dict]) -> tuple[str, List[Dict]]:
+        """将 OpenAI 风格消息列表转换为 Anthropic messages。"""
         system_parts: List[str] = []
         anth_messages: List[Dict] = []
 
@@ -122,6 +132,7 @@ class AnthropicLLMClient(BaseLLMClient):
         return system_prompt, anth_messages
 
     def chat(self, messages: List[Dict], tools_schema: List[Dict] = None) -> Any:
+        """执行一次 Anthropic 请求并转换为统一响应结构。"""
         if self.mock_mode:
             return _ResponseMessage(
                 content="Mock response due to missing ANTHROPIC_API_KEY.", tool_calls=None

@@ -1,45 +1,44 @@
 import inspect
-from typing import Callable, Any, Dict
+from typing import Any, Callable, Dict
+
 
 class ToolRegistry:
-    """
-    极简工具箱 (参考 pi-mono `CallableTool`)
-    把一个普通的 Python 函数转化为大模型可以通过 JSON 调用的工具。
-    核心利用 Python 的 TypeHint 和 Docstring 来自动生成 Schema。
-    """
+    """极简工具注册中心：负责工具注册、Schema 生成与执行。"""
+
     def __init__(self):
+        """初始化工具字典与 schema 列表。"""
         self.tools: Dict[str, Callable] = {}
         self.schemas = []
 
     def register(self, func: Callable) -> Callable:
-        """装饰器：将函数注册为 Tool"""
+        """装饰器入口：将函数注册为可供 LLM 调用的工具。"""
         name = func.__name__
         self.tools[name] = func
         self.schemas.append(self._generate_schema(func))
         return func
 
     def _generate_schema(self, func: Callable) -> dict:
-        """解析函数签名，生成 OpenAI 兼容的 Function Calling Schema"""
+        """根据函数签名与注释生成 OpenAI Function Calling Schema。"""
         sig = inspect.signature(func)
         doc = inspect.getdoc(func) or f"Execute {func.__name__}"
-        
+
         properties = {}
         required = []
-        
+
         for param_name, param in sig.parameters.items():
             if param_name == "self":
                 continue
-                
-            # 简化版：这里我们将所有参数都视作 string 或 number，实际中可以做更复杂的类型推断
-            param_type = "string" 
+
+            # 简化版类型推断，教学场景足够
+            param_type = "string"
             if param.annotation == int or param.annotation == float:
-                 param_type = "number"
+                param_type = "number"
             elif param.annotation == bool:
-                 param_type = "boolean"
-                 
+                param_type = "boolean"
+
             properties[param_name] = {
                 "type": param_type,
-                "description": f"Parameter {param_name}" # 在真实环境下这里可以进一步解析 docstring 里的 Args:
+                "description": f"Parameter {param_name}",
             }
             if param.default == inspect.Parameter.empty:
                 required.append(param_name)
@@ -48,26 +47,28 @@ class ToolRegistry:
             "type": "function",
             "function": {
                 "name": func.__name__,
-                "description": doc.split('\n')[0], # 取简短描述
+                "description": doc.split("\n")[0],
                 "parameters": {
                     "type": "object",
                     "properties": properties,
-                    "required": required
-                }
-            }
+                    "required": required,
+                },
+            },
         }
 
     def execute(self, tool_name: str, arguments: dict) -> Any:
-        """真正的执行动作 (Action)"""
+        """执行指定工具并返回结果。"""
         if tool_name not in self.tools:
             raise ValueError(f"Tool {tool_name} not found")
-        
+
         func = self.tools[tool_name]
         return func(**arguments)
 
-# 实例化一个全局的沙盒工具箱
+
+# 实例化一个全局工具注册中心
 registry = ToolRegistry()
 
-# 提供一个便捷装饰器
+
 def tool(func):
+    """便捷装饰器：等价于 `registry.register(func)`。"""
     return registry.register(func)

@@ -8,6 +8,7 @@ class QwenLLMClient(BaseLLMClient):
     """Qwen（DashScope OpenAI 兼容）客户端封装。"""
 
     def __init__(self, model: str = "qwen-plus"):
+        """初始化 Qwen 客户端并读取环境变量配置。"""
         import openai
         from dotenv import load_dotenv
 
@@ -28,6 +29,7 @@ class QwenLLMClient(BaseLLMClient):
         self.model = os.environ.get("LLM_MODEL", model)
 
     def chat(self, messages: List[Dict], tools_schema: List[Dict] = None) -> Any:
+        """执行一次聊天请求；当无 QWEN_API_KEY 时返回 mock 响应。"""
         if self.mock_mode:
             from collections import namedtuple
 

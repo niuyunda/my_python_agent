@@ -7,6 +7,7 @@ from .qwen import QwenLLMClient
 
 
 def create_llm_client() -> BaseLLMClient:
+    """根据 `LLM_PROVIDER` 创建对应的 LLM 客户端实例。"""
     provider = os.environ.get("LLM_PROVIDER", "openai").strip().lower()
 
     if provider == "openai":
