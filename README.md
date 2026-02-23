@@ -1,43 +1,107 @@
-# 极简 AI Agent 引擎演示项目
+# 极简 Python Agent（Tool Calling ReAct Loop）
 
-本项目为**基于第一性原理的纯粹 AI Agent 核心引擎**。这参考了目前硅谷流行的 `pi-mono` 等极简、高内聚 Agent 框架的设计哲学。
+这是一个教学向的最小可运行 Agent 项目：
+- 用 **ReAct 循环**（Thought → Action → Observation）驱动推理与工具调用
+- 用 **装饰器 + 反射** 自动把 Python 函数注册为 LLM 可调用工具
+- 保持高内聚、低复杂度，便于学习与二次扩展
 
-## 核心架构
+---
 
-1. **`src/llm_client.py`**:
-   极简的 LLM 通信基座。在这里，与模型（如 OpenAI API）的交互被抽象为最基础的聊天收发，并维护了一个原生的 Memory（上下文窗口）。
-2. **`src/tools_registry.py`**:
-   极其强大的魔法部件。“把常规函数变成大模型的肢体”。我们设计了一个 `@tool` 装饰器，它能利用 Python 的反射机制（Inspector）自动解析类型注解和文档说明，将其零成本转换为符合 LLM Function Calling 规范的 JSON Schema 契约。
-3. **`src/agent.py`**:
-   **引擎的心脏 (The ReAct Loop)**。它不关心任何具体业务，只负责无限循环驱动经典的 `Thought -> Action -> Observation` 模式。
-4. **`src/sandbox_tools.py`**:
-   我们提供给这头猛兽的“原子积木”和沙盒。例如 `read_file`, `write_file`, `calculate`。
+## 当前代码结构（以仓库为准）
 
-## 如何运行你的 Agent
+```text
+src/
+├─ agent/core.py         # Agent 主循环（ReAct）
+├─ memory/buffer.py      # 对话记忆窗
+├─ providers/openai.py   # OpenAI 客户端封装（支持 mock 模式）
+├─ tool/registry.py      # @tool 注册器 + schema 生成 + 执行
+├─ tool/sandbox.py       # 示例工具（calculate/read_file/write_file）
+└─ main.py               # 终端入口
 
-这是一个可以直接在终端交互的纯粹数字生命体。
-
-### 1. 安装依赖
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+tests/unit/
+├─ test_agent.py         # Agent 循环行为测试
+└─ test_tools.py         # Tool Registry 测试
 ```
 
-### 2. 配置环境并唤醒 Agent
-如果不配置 `OPENAI_API_KEY`，Agent 将会在 Mock 模式下运行，用于安全测试。
-如果你想见证奇迹的发生，请配置你的 API Key 然后运行核心引擎：
+---
+
+## 运行环境
+
+- Python: `>=3.14`（见 `pyproject.toml`）
+- 包管理：`uv`
+
+> 如果你想兼容更常见环境（如 3.11/3.12），可把 `requires-python` 下调后重新测试。
+
+---
+
+## 快速开始
+
+### 1) 安装依赖
+
 ```bash
-export OPENAI_API_KEY="sk-xxxx"
-python3 src/main.py
+uv sync
 ```
 
-### 3. 如何增加它的能力？
-你不需要去修改那些冗杂的 Service 层。你要做的，仅仅是在 `src/sandbox_tools.py` 中写一个最质朴的 Python 原子函数，然后加上 `@tool` 装饰器。
-**它立刻就能听懂并调用！**
+### 2) 配置环境变量
 
+可复制示例：
 
-我们配套了 AgentLoop 和 ToolRegistry 解析层面的拦截测试，确保任何对底层引擎的扰动都会被拦下：
 ```bash
-python3 -m pytest tests/unit/
+cp .env.example .env
 ```
+
+常用变量：
+- `OPENAI_API_KEY`：必填（不填会进入 mock 模式）
+- `OPENAI_BASE_URL`：可选（代理/OpenRouter 等）
+- `LLM_MODEL`：可选，覆盖默认模型
+
+### 3) 启动 Agent
+
+```bash
+uv run src/main.py
+```
+
+---
+
+## 测试
+
+```bash
+uv run --with pytest python -m pytest -q
+```
+
+当前测试覆盖：
+- Agent 的工具调用闭环是否正常
+- Tool schema 生成是否符合 function calling 预期
+- Tool 执行路径是否正常
+
+---
+
+## 如何扩展 Agent 能力
+
+在 `src/tool/sandbox.py`（或你自己的工具模块）里新增函数并加 `@tool`：
+
+```python
+from src.tool.registry import tool
+
+@tool
+def weather(city: str) -> str:
+    """获取城市天气。"""
+    return f"{city}: sunny"
+```
+
+只要模块被 import，工具就会自动注册进 `registry`，Agent 下一轮推理就可调用它。
+
+---
+
+## 已知限制（教学版刻意简化）
+
+- `ToolRegistry` 的类型推断较简化（主要是 string/number/boolean）
+- `calculate` 仅做了基础 AST 安全处理，不适合作为生产计算沙盒
+- `read_file/write_file` 没有做更严格的路径白名单控制
+- Agent `max_loops=5`，用于防止无限调用
+
+---
+
+## 设计目标
+
+这个仓库不是“全功能框架”，而是一个方便你快速理解 Agent 基本原理的 **最小内核**。先跑通闭环，再按业务逐层增强。
