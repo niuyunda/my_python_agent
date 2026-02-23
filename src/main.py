@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.agent import Agent
-from src.providers import OpenAILLMClient
+from src.providers import create_llm_client
 # 为了让 registry 注册工具，虽然不在 main 里直接调，但也需要 import 初始化
 import src.tool.sandbox 
 
@@ -18,14 +18,21 @@ def main():
     from dotenv import load_dotenv
     load_dotenv()
     
-    if not os.environ.get("OPENAI_API_KEY"):
-        print("[警告] 没有检测到 OPENAI_API_KEY 环境变量。")
+    provider = os.environ.get("LLM_PROVIDER", "openai").strip().lower()
+    key_name = {
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "qwen": "QWEN_API_KEY",
+    }.get(provider)
+
+    if key_name and not os.environ.get(key_name):
+        print(f"[警告] 没有检测到 {key_name} 环境变量。")
         print("       Agent 将在 Mock 模式下运行（无法真正使用工具）。")
         print("       请随时按 Ctrl+C 退出。")
-    
+
     # 实例化我们的极简 Agent
     agent = Agent(
-        llm_client=OpenAILLMClient(),
+        llm_client=create_llm_client(),
         system_prompt="""
         你是一个拥有物理文件操作和计算能力的极简终端 Agent。
         你会尽力使用你拥有的 tools 来分步解决用户的难题。

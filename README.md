@@ -14,6 +14,9 @@ src/
 ├─ agent/core.py         # Agent 主循环（ReAct）
 ├─ memory/buffer.py      # 对话记忆窗
 ├─ providers/openai.py   # OpenAI 客户端封装（支持 mock 模式）
+├─ providers/anthropic.py# Anthropic 客户端封装（兼容工具调用）
+├─ providers/qwen.py     # Qwen(DashScope) 客户端封装
+├─ providers/__init__.py # provider 工厂（按 LLM_PROVIDER 选择）
 ├─ tool/registry.py      # @tool 注册器 + schema 生成 + 执行
 ├─ tool/sandbox.py       # 示例工具（calculate/read_file/write_file）
 └─ main.py               # 终端入口
@@ -51,9 +54,11 @@ cp .env.example .env
 ```
 
 常用变量：
-- `OPENAI_API_KEY`：必填（不填会进入 mock 模式）
-- `OPENAI_BASE_URL`：可选（代理/OpenRouter 等）
-- `LLM_MODEL`：可选，覆盖默认模型
+- `LLM_PROVIDER`：`openai` / `anthropic` / `qwen`
+- `LLM_MODEL`：可选，覆盖各 provider 默认模型
+- OpenAI: `OPENAI_API_KEY`、`OPENAI_BASE_URL`（可选）
+- Anthropic: `ANTHROPIC_API_KEY`
+- Qwen: `QWEN_API_KEY`、`QWEN_BASE_URL`（可选，默认 DashScope 兼容地址）
 
 ### 3) 启动 Agent
 
