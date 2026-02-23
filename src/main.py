@@ -9,10 +9,10 @@ from src.agent import Agent
 import src.sandbox_tools 
 
 def main():
-    print("="*50)
+    print("="*60)
     print(" 欢迎来到极简 AI Agent 终端 (参考 pi-mono 设计) ")
     print(" 核心: 无 Controller、无 Repository，纯粹的 Tool Calling")
-    print("="*50)
+    print("="*60)
     
     from dotenv import load_dotenv
     load_dotenv()
