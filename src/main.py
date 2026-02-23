@@ -5,8 +5,9 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.agent import Agent
+from src.providers import OpenAILLMClient
 # 为了让 registry 注册工具，虽然不在 main 里直接调，但也需要 import 初始化
-import src.sandbox_tools 
+import src.tool.sandbox 
 
 def main():
     print("="*60)
@@ -23,7 +24,9 @@ def main():
         print("       请随时按 Ctrl+C 退出。")
     
     # 实例化我们的极简 Agent
-    agent = Agent(system_prompt="""
+    agent = Agent(
+        llm_client=OpenAILLMClient(),
+        system_prompt="""
         你是一个拥有物理文件操作和计算能力的极简终端 Agent。
         你会尽力使用你拥有的 tools 来分步解决用户的难题。
         如果任务完成，使用中文礼貌地汇报你的结果。

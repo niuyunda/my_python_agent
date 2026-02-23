@@ -1,5 +1,5 @@
 import pytest
-from src.tools_registry import ToolRegistry
+from src.tool.registry import ToolRegistry
 
 def test_tool_registry_schema_generation():
     registry = ToolRegistry()

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
 from src.agent import Agent
-import src.sandbox_tools  # 必须引入以触发 @tool 注册
+import src.tool.sandbox  # 必须引入以触发 @tool 注册
 
 class MockToolCall:
     def __init__(self, name, arguments):
@@ -17,7 +17,7 @@ class MockResponseMsg:
 
 def test_agent_run_loop_with_tool_call(monkeypatch):
     """验证 Agent 的 Thought -> Action 循环是否能被正确驱动"""
-    agent = Agent()
+    agent = Agent(llm_client=MagicMock())
     
     # 模拟一个两步的完美 LLM 响应流
     # Loop 1: LLM 决定调用 `calculate` 工具

@@ -2,7 +2,7 @@
 这是一组供 Agent 使用的“原子化”工具示例。
 对于 Agent 来说，这些就像是它的手和眼睛。
 """
-from src.tools_registry import tool
+from src.tool.registry import tool
 import os
 
 @tool

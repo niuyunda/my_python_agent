@@ -1,15 +1,16 @@
 import json
-from src.llm_client import OpenAILLMClient, AgentMemory
-from src.tools_registry import registry
+from src.providers.base import BaseLLMClient
+from src.memory.buffer import AgentMemory
+from src.tool.registry import registry
 
 class Agent:
     """
     Agent 核心引擎：
     负责驱动 Thought(思考) -> Action(调用工具) -> Observation(获取结果) 的循环。
     """
-    def __init__(self, system_prompt: str = "You are a helpful AI assistant."):
+    def __init__(self, llm_client: BaseLLMClient, system_prompt: str = "You are a helpful AI assistant."):
         self.memory = AgentMemory(system_prompt)
-        self.llm = OpenAILLMClient()
+        self.llm = llm_client
         self.max_loops = 5 # 防止陷入无限工具调用死循环
 
     def run(self, user_input: str) -> str:
