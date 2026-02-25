@@ -1,5 +1,7 @@
 import pytest
 from src.tool.registry import ToolRegistry
+from src.tool.registry import registry
+import src.tool.sandbox  # noqa: F401  # 触发工具注册
 
 def test_tool_registry_schema_generation():
     registry = ToolRegistry()
@@ -39,3 +41,47 @@ def test_tool_execution():
         
     result = registry.execute("add", {"a": 5, "b": 10})
     assert result == 15
+
+
+def test_execute_python_file_success(tmp_path):
+    script = tmp_path / "hello.py"
+    write_result = registry.execute(
+        "write_file",
+        {
+            "filepath": str(script),
+            "content": (
+                "import sys\n"
+                "print('hello from stdout')\n"
+                "print('hello from stderr', file=sys.stderr)\n"
+            )
+        }
+    )
+    assert "Successfully wrote" in write_result
+
+    result = registry.execute(
+        "execute_python_file",
+        {"filepath": str(script), "timeout_seconds": 2}
+    )
+
+    assert "Exit Code: 0" in result
+    assert "STDOUT:\nhello from stdout" in result
+    assert "STDERR:\nhello from stderr" in result
+
+
+def test_execute_python_file_timeout(tmp_path):
+    script = tmp_path / "sleepy.py"
+    script.write_text(
+        "import time\n"
+        "print('start', flush=True)\n"
+        "time.sleep(2)\n"
+        "print('done')\n",
+        encoding="utf-8"
+    )
+
+    result = registry.execute(
+        "execute_python_file",
+        {"filepath": str(script), "timeout_seconds": 1}
+    )
+
+    assert "timed out after 1 seconds" in result
+    assert "STDOUT:\nstart" in result
