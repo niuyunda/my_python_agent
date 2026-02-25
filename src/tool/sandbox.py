@@ -4,6 +4,8 @@ import os
 import subprocess
 import sys
 
+from src.tool.registry import tool
+
 
 def _normalize_output(output) -> str:
     if output is None:
@@ -11,9 +13,6 @@ def _normalize_output(output) -> str:
     if isinstance(output, bytes):
         return output.decode("utf-8", errors="replace")
     return str(output)
-
-from src.tool.registry import tool
-
 
 @tool
 def calculate(expression: str) -> str:
