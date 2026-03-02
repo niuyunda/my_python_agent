@@ -1,6 +1,16 @@
 """供 Agent 调用的原子化工具集合（教学用途）。"""
 
 import os
+import subprocess
+import sys
+
+
+def _normalize_output(output) -> str:
+    if output is None:
+        return ""
+    if isinstance(output, bytes):
+        return output.decode("utf-8", errors="replace")
+    return str(output)
 
 from src.tool.registry import tool
 
@@ -58,3 +68,38 @@ def write_file(filepath: str, content: str) -> str:
         return f"Successfully wrote {len(content)} characters to {filepath}."
     except Exception as e:
         return f"Error writing to file: {str(e)}"
+
+@tool
+def execute_python_file(filepath: str, timeout_seconds: int = 5) -> str:
+    """执行指定的 Python 文件并返回 stdout/stderr (Execute a Python file and capture stdout/stderr)."""
+    try:
+        if not os.path.exists(filepath):
+            return f"Error: File {filepath} does not exist."
+        if not filepath.endswith(".py"):
+            return f"Error: File {filepath} is not a Python file."
+
+        completed = subprocess.run(
+            [sys.executable, filepath],
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=False
+        )
+
+        stdout = _normalize_output(completed.stdout).rstrip("\n")
+        stderr = _normalize_output(completed.stderr).rstrip("\n")
+        return (
+            f"Exit Code: {completed.returncode}\n"
+            f"STDOUT:\n{stdout if stdout else '(empty)'}\n"
+            f"STDERR:\n{stderr if stderr else '(empty)'}"
+        )
+    except subprocess.TimeoutExpired as e:
+        stdout = _normalize_output(e.stdout).rstrip("\n")
+        stderr = _normalize_output(e.stderr).rstrip("\n")
+        return (
+            f"Error: Python execution timed out after {timeout_seconds} seconds.\n"
+            f"STDOUT:\n{stdout if stdout else '(empty)'}\n"
+            f"STDERR:\n{stderr if stderr else '(empty)'}"
+        )
+    except Exception as e:
+        return f"Error executing Python file: {str(e)}"
