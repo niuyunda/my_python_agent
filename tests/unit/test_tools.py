@@ -43,7 +43,8 @@ def test_tool_execution():
     assert result == 15
 
 
-def test_execute_python_file_success(tmp_path):
+def test_execute_python_file_success(tmp_path, monkeypatch):
+    monkeypatch.setattr(src.tool.sandbox, "WORKSPACE_ROOT", str(tmp_path))
     script = tmp_path / "hello.py"
     write_result = registry.execute(
         "write_file",
@@ -68,7 +69,8 @@ def test_execute_python_file_success(tmp_path):
     assert "STDERR:\nhello from stderr" in result
 
 
-def test_execute_python_file_timeout(tmp_path):
+def test_execute_python_file_timeout(tmp_path, monkeypatch):
+    monkeypatch.setattr(src.tool.sandbox, "WORKSPACE_ROOT", str(tmp_path))
     script = tmp_path / "sleepy.py"
     script.write_text(
         "import time\n"
@@ -85,3 +87,41 @@ def test_execute_python_file_timeout(tmp_path):
 
     assert "timed out after 1 seconds" in result
     assert "STDOUT:\nstart" in result
+
+
+def test_execute_python_file_missing_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(src.tool.sandbox, "WORKSPACE_ROOT", str(tmp_path))
+    missing = tmp_path / "missing.py"
+
+    result = registry.execute(
+        "execute_python_file",
+        {"filepath": str(missing), "timeout_seconds": 2}
+    )
+
+    assert "does not exist" in result
+
+
+def test_execute_python_file_non_py_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(src.tool.sandbox, "WORKSPACE_ROOT", str(tmp_path))
+    txt_file = tmp_path / "notes.txt"
+    txt_file.write_text("not python", encoding="utf-8")
+
+    result = registry.execute(
+        "execute_python_file",
+        {"filepath": str(txt_file), "timeout_seconds": 2}
+    )
+
+    assert "is not a Python file" in result
+
+
+def test_execute_python_file_invalid_timeout(tmp_path, monkeypatch):
+    monkeypatch.setattr(src.tool.sandbox, "WORKSPACE_ROOT", str(tmp_path))
+    script = tmp_path / "valid.py"
+    script.write_text("print('ok')\n", encoding="utf-8")
+
+    result = registry.execute(
+        "execute_python_file",
+        {"filepath": str(script), "timeout_seconds": 0}
+    )
+
+    assert "timeout_seconds must be a positive number" in result

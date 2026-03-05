@@ -4,6 +4,12 @@ import os
 import subprocess
 import sys
 
+from src.tool.registry import tool
+
+WORKSPACE_ROOT = os.path.realpath(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+)
+
 
 def _normalize_output(output) -> str:
     if output is None:
@@ -12,8 +18,12 @@ def _normalize_output(output) -> str:
         return output.decode("utf-8", errors="replace")
     return str(output)
 
-from src.tool.registry import tool
 
+def _is_within_workspace(resolved_filepath: str) -> bool:
+    try:
+        return os.path.commonpath([resolved_filepath, WORKSPACE_ROOT]) == WORKSPACE_ROOT
+    except ValueError:
+        return False
 
 @tool
 def calculate(expression: str) -> str:
@@ -72,11 +82,22 @@ def write_file(filepath: str, content: str) -> str:
 @tool
 def execute_python_file(filepath: str, timeout_seconds: int = 5) -> str:
     """执行指定的 Python 文件并返回 stdout/stderr (Execute a Python file and capture stdout/stderr)."""
+    if (
+        isinstance(timeout_seconds, bool)
+        or not isinstance(timeout_seconds, (int, float))
+        or timeout_seconds <= 0
+    ):
+        return "Error: timeout_seconds must be a positive number."
+
     try:
         if not os.path.exists(filepath):
             return f"Error: File {filepath} does not exist."
         if not filepath.endswith(".py"):
             return f"Error: File {filepath} is not a Python file."
+        resolved_filepath = os.path.realpath(os.path.abspath(filepath))
+        if not _is_within_workspace(resolved_filepath):
+            return f"Error: File {filepath} is outside trusted workspace root."
+        filepath = resolved_filepath
 
         completed = subprocess.run(
             [sys.executable, filepath],
